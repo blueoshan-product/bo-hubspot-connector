@@ -1,0 +1,13 @@
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../lib/internal/Magento/Framework/ObjectManager/etc/config.xsd">
+
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="blueoshanAddItem" xsi:type="object">Blueoshan\HubspotConnector\Console\Command\AddItem</item>
+            </argument>
+        </arguments>
+    </type>
+    <preference for="Blueoshan\HubspotConnector\Api\Data\ItemInterface" type="Blueoshan\HubspotConnector\Model\Item" />
+    <preference for="Blueoshan\HubspotConnector\Api\ItemRepositoryInterface" type="Blueoshan\HubspotConnector\Model\ItemRepository" />
+
+</config>

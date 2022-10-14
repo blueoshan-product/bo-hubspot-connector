@@ -1,0 +1,8 @@
+<?php 
+/** @var \Blueoshan\HubspotConnector\Block\Hello $block */
+?>
+<?php foreach ($block->getItems() as $item) :  ?>
+<p>
+    <?php echo $item->getName(); ?>: <?php echo $item->getDescription(); ?>
+</p>
+<?php endforeach; ?>

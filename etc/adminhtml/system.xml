@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="blueoshan" translate="label" sortOrder="10000">
+            <label>Blueoshan</label>
+        </tab>
+        <section id="blueoshan" translate="label" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+            <label>HubSpot Connector Config</label>
+            <tab>blueoshan</tab>
+            <resource>Blueoshan_SampleModule::blueoshan</resource>
+            <group id="connection" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Item Creation by Schedule</label>
+                <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable HubSpot Connector</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="integration" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1"
+                       showInStore="1">
+                    <label>Blueoshan Integration Identifier</label>
+                    <depends>
+                        <field id="blueoshan/connection/enabled">1</field>
+                    </depends>
+                    <comment>This will be filled in by Blueoshan API when the store is connected to Blueoshan account.</comment>
+                </field>
+            </group>
+            <group id="webhook" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1"
+                   showInStore="1">
+                <label>Webhook Settings</label>
+                <depends>
+                    <field id="blueoshan/connection/enabled">1</field>
+                </depends>
+                <field id="hook_url" translate="label" type="text" sortOrder="100" showInDefault="1"
+                       showInWebsite="1"
+                       showInStore="1">
+                    <label>Blueoshan Webhook URL</label>
+                    <depends>
+                        <field id="blueoshan/connection/enabled">1</field>
+                    </depends>
+                </field>
+                <field id="abandoned_time" translate="label" type="text" sortOrder="100" showInDefault="1"
+                       showInWebsite="1"
+                       showInStore="1">
+                    <label>AbandonedCart Cart Time</label>
+                    <validate>validate-digits</validate>
+                    <comment>How to deteminte as Abandonded Cart. Enter number of hour(s). Recommend: 1, 6, 10, 12, 24. Default: 10</comment>
+                    <depends>
+                        <field id="blueoshan/connection/enabled">1</field>
+                    </depends>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>
