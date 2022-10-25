@@ -7,4 +7,10 @@
             <resource ref="anonymous" />
         </resources>
     </route>
+    <route url="/V1/blueoshan/getAttributes" method="POST">
+        <service class="Blueoshan\HubspotConnector\Api\AttributeInterface" method="getAttributes" />
+        <resources>
+            <resource ref="anonymous" />
+        </resources>
+    </route>
 </routes>

@@ -14,7 +14,7 @@ use Magento\Store\Model\StoreManagerInterface;
 use Magento\Quote\Model\QuoteIdMaskFactory;
 use Blueoshan\HubspotConnector\Helper\Data;
 use Psr\Log\LoggerInterface;
-use GuzzleHttp\Client;
+use Zend_Http_Response;
 
 /**
  * Class AbandonedCart
@@ -92,7 +92,12 @@ class AbandonedCart
         if (!$this->helper->isConnectorEnabled()) {
             return;
         }
-
+        $websiteId = $this->helper->getWebsiteId();
+        $storeId = $this->helper->getStoreId();
+        $storeCode = $this->helper->getStoreCode();
+        $stores=$this->helper->getStores();
+        $body = array();
+        $body["eventName"] = "abandoned_cart";
         $abandonedTime = (int)$this->helper->getConfigGeneral('blueoshan/webhook/abandoned_time');
         $this->logger->debug('Abandoned Time is '.$abandonedTime);
         $update = (new DateTime())->sub(new DateInterval("PT{$abandonedTime}H"));
@@ -137,7 +142,44 @@ class AbandonedCart
                 foreach ($quote->getAllItems() as $item) {
                         $output['items'][] = $this->helper->objToArray($item);
                 }
+                $body["data"] = $output;
                 $this->logger->debug('Abandoned cart is' . json_encode($output));
+                $body["storeData"] = [
+                    "websiteId" => $websiteId,
+                    "storeId" => $storeId,
+                    "storeCode" => $storeCode,
+                    "storeURL" => (isset($stores[$storeId]['store_url']))?  $stores[$storeId]['store_url']: $this->getBaseUrl(),
+                    "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->getMediaUrl()
+                ];
+                $url = $this->helper->getConfigGeneral('blueoshan/webhook/hook_url');
+        
+                $method = 'POST';
+                
+                $headersConfig[] = 'Content-Type: application/json';
+                
+                $curl = $this->curlFactory->create();
+
+                $curl->write($method, $url, '1.1', $headersConfig, $body);
+
+                $result = ['success' => false];
+
+                try {
+                    $resultCurl         = $curl->read();
+                    $result['response'] = $resultCurl;
+                    if (!empty($resultCurl)) {
+                        $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                        if (isset($result['status']) && $this->helper->isSuccess($result['status'])) {
+                            $result['success'] = true;
+                        } else {
+                            $result['message'] = __('Cannot connect to server. Please try again later.');
+                        }
+                    } else {
+                        $result['message'] = __('Cannot connect to server. Please try again later.');
+                    }
+                } catch (Exception $e) {
+                    $result['message'] = $e->getMessage();
+                }
+                $curl->close();
             }
             foreach ($noneUpdateQuoteCollection as $quote) {
                 $output = $this->helper->objToArray($quote);
@@ -161,7 +203,44 @@ class AbandonedCart
                 foreach ($quote->getAllItems() as $item) {
                         $output['items'][] = $this->helper->objToArray($item);
                 }
+                $body["data"] = $output;
                 $this->logger->debug('Abandoned cart is' . json_encode($output));
+                $body["storeData"] = [
+                    "websiteId" => $websiteId,
+                    "storeId" => $storeId,
+                    "storeCode" => $storeCode,
+                    "storeURL" => (isset($stores[$storeId]['store_url']))?  $stores[$storeId]['store_url']: $this->getBaseUrl(),
+                    "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->getMediaUrl()
+                ];
+                $url = $this->helper->getConfigGeneral('blueoshan/webhook/hook_url');
+        
+                $method = 'POST';
+                
+                $headersConfig[] = 'Content-Type: application/json';
+                
+                $curl = $this->curlFactory->create();
+
+                $curl->write($method, $url, '1.1', $headersConfig, $body);
+
+                $result = ['success' => false];
+
+                try {
+                    $resultCurl         = $curl->read();
+                    $result['response'] = $resultCurl;
+                    if (!empty($resultCurl)) {
+                        $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                        if (isset($result['status']) && $this->helper->isSuccess($result['status'])) {
+                            $result['success'] = true;
+                        } else {
+                            $result['message'] = __('Cannot connect to server. Please try again later.');
+                        }
+                    } else {
+                        $result['message'] = __('Cannot connect to server. Please try again later.');
+                    }
+                } catch (Exception $e) {
+                    $result['message'] = $e->getMessage();
+                }
+                $curl->close();
             }
         } catch (Exception $e) {
             $this->logger->critical($e->getMessage());

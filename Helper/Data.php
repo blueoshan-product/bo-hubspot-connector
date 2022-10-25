@@ -88,7 +88,7 @@ class Data extends AbstractHelper
     }
     public function logData($logName,$item)
     {
-        $this->logger->debug($logName . ' is ' . \Magento\Framework\Serialize\JsonConverter::convert(method_exists($item, 'getData')?$item->getData():$this->objToArray($item)));
+        $this->logger->debug($logName . ' is ' . \Magento\Framework\Serialize\JsonConverter::convert($this->objToArray($item)));
     }
     /**
      * @param $item
@@ -227,39 +227,39 @@ class Data extends AbstractHelper
         $stores=$this->getStores();
         $body = array();
         $body["eventName"] = $item->getEvent()->getName();
-        $this->logData($item->getEvent()->getName() , $item->getDataObject());
         $data = $this->objToArray($item->getDataObject());
         if($item->getEvent()->getName() == "customer_login"){
             $data = $this->objToArray($item->getCustomer());
         }
-
-        if (method_exists($item->getDataObject(),'getShippingAddress')) {
-            $data["shipping_address"] = $this->objToArray($item->getDataObject()->getShippingAddress());
-        }
-        if (method_exists($item->getDataObject(),'getBillingAddress')) {
-            $data["billing_address"] = $this->objToArray($item->getDataObject()->getBillingAddress());
-        }
-        if (method_exists($item->getDataObject(),'getAllItems')) {
-            $data['items'] = [];
-            foreach ($item->getDataObject()->getAllItems() as $item) {
-                $data['items'][] = $this->objToArray($item);
+        if($item->getEvent()->getName() != "customer_login"){
+            if (method_exists($item->getDataObject(),'getShippingAddress')) {
+                $data["shipping_address"] = $this->objToArray($item->getDataObject()->getShippingAddress());
+            }
+            if (method_exists($item->getDataObject(),'getBillingAddress')) {
+                $data["billing_address"] = $this->objToArray($item->getDataObject()->getBillingAddress());
+            }
+            if (method_exists($item->getDataObject(),'getAllItems')) {
+                $data['items'] = [];
+                foreach ($item->getDataObject()->getAllItems() as $item) {
+                    $data['items'][] = $this->objToArray($item);
+                }
             }
         }
-        if (method_exists($item->getDataObject(),'getPayment')) {
-            $data['payments'] = $this->objToArray($item->getDataObject()->getPayment());
-        }
-        if(method_exists($item->getDataObject(),'getTracks')){
-            $data['tracks'] = $this->objToArray($item->getDataObject()->getTracks());
-        }
+        // if (method_exists($item->getDataObject(),'getPayment')) {
+        //     $data['payments'] = $this->objToArray($item->getDataObject()->getPayment());
+        // }
+        // if(method_exists($item->getDataObject(),'getTracks')){
+        //     $data['tracks'] = $this->objToArray($item->getDataObject()->getTracks());
+        // }
         // if($item->getDataObject()->getTracksCollection()){
         //     $data->setData('shipmentTracks', $data->getTracksCollection()->getData());
         // }
-        if(method_exists($item->getDataObject(),'getPackages')){
-            $data['packages'] = $this->objToArray($item->getDataObject()->getPackages());
-        }
-        if (method_exists($item->getDataObject(),'getShipmentsCollection')) {
-            $data['shipments'] = $this->objToArray($item->getDataObject()->getShipmentsCollection());
-        }
+        // if(method_exists($item->getDataObject(),'getPackages')){
+        //     $data['packages'] = $this->objToArray($item->getDataObject()->getPackages());
+        // }
+        // if (method_exists($item->getDataObject(),'getShipmentsCollection')) {
+        //     $data['shipments'] = $this->objToArray($item->getDataObject()->getShipmentsCollection());
+        // }
         $body["data"] = $data;
         $body["storeData"] = [
             "websiteId" => $websiteId,
