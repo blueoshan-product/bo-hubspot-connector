@@ -1,5 +1,5 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../lib/internal/Magento/Framework/ObjectManager/etc/config.xsd">
-
     <preference for="Blueoshan\HubspotConnector\Api\AttributeInterface" type="Blueoshan\HubspotConnector\Model\Api\AttributeInterface" />
-
+    <preference for="Blueoshan\HubspotConnector\Api\OrderStatusInterface" type="Blueoshan\HubspotConnector\Model\Api\OrderStatusInterface" />
+    <preference for="Blueoshan\HubspotConnector\Api\AbandonedCartInterface" type="Blueoshan\HubspotConnector\Model\Api\AbandonedCartInterface" />
 </config>

@@ -11,6 +11,7 @@ use Magento\Quote\Model\ResourceModel\Quote\Collection;
 use Magento\Quote\Model\ResourceModel\Quote\CollectionFactory as QuoteCollection;
 use Magento\Quote\Model\ResourceModel\Quote\Item\CollectionFactory as QuoteItemCollection;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Framework\HTTP\Adapter\CurlFactory;
 use Magento\Quote\Model\QuoteIdMaskFactory;
 use Blueoshan\HubspotConnector\Helper\Data;
 use Psr\Log\LoggerInterface;
@@ -38,6 +39,11 @@ class AbandonedCart
     protected $storeManager;
 
     /**
+     * @var CurlFactory
+     */
+    protected $curlFactory;
+    
+    /**
      * @var Data
      */
     protected $helper;
@@ -61,6 +67,7 @@ class AbandonedCart
      * @param LoggerInterface $logger
      * @param QuoteFactory $quoteFactory
      * @param StoreManagerInterface $storeManager
+     * @param CurlFactory $curlFactory
      * @param QuoteIdMaskFactory $quoteIdMaskFactory
      * @param \Magento\Quote\Model\ResourceModel\Quote\CollectionFactory $quoteCollection
      * @param \Magento\Quote\Model\ResourceModel\Quote\Item\Collection $quoteItemCollection
@@ -71,6 +78,7 @@ class AbandonedCart
         QuoteFactory $quoteFactory,
         StoreManagerInterface $storeManager,
         Data $helper,
+        CurlFactory $curlFactory,
         QuoteIdMaskFactory $quoteIdMaskFactory,
         QuoteCollection $quoteCollection,
         QuoteItemCollection $quoteItemCollection
@@ -80,6 +88,7 @@ class AbandonedCart
         $this->quoteIdMaskFactory = $quoteIdMaskFactory;
         $this->storeManager = $storeManager;
         $this->helper = $helper;
+        $this->curlFactory = $curlFactory;
         $this->quoteCollection = $quoteCollection;
         $this->quoteItemCollection = $quoteItemCollection;
     }
@@ -95,9 +104,11 @@ class AbandonedCart
         $websiteId = $this->helper->getWebsiteId();
         $storeId = $this->helper->getStoreId();
         $storeCode = $this->helper->getStoreCode();
+        $storeName = $this->helper->getStoreName();
         $stores=$this->helper->getStores();
         $body = array();
         $body["eventName"] = "abandoned_cart";
+        $custGroups = $this->helper->getCustomerGroups();
         $abandonedTime = (int)$this->helper->getConfigGeneral('blueoshan/webhook/abandoned_time');
         $this->logger->debug('Abandoned Time is '.$abandonedTime);
         $update = (new DateTime())->sub(new DateInterval("PT{$abandonedTime}H"));
@@ -148,38 +159,51 @@ class AbandonedCart
                     "websiteId" => $websiteId,
                     "storeId" => $storeId,
                     "storeCode" => $storeCode,
-                    "storeURL" => (isset($stores[$storeId]['store_url']))?  $stores[$storeId]['store_url']: $this->getBaseUrl(),
-                    "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->getMediaUrl()
+                    "storeName" => $storeName,
+                    "storeURL" => (isset($stores[$storeId]['store_url']))?  $stores[$storeId]['store_url']: $this->helper->getBaseUrl(),
+                    "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->helper->getMediaUrl()
                 ];
                 $url = $this->helper->getConfigGeneral('blueoshan/webhook/hook_url');
         
                 $method = 'POST';
                 
-                $headersConfig[] = 'Content-Type: application/json';
+                // $headersConfig[] = 'Content-Type: application/json';
                 
-                $curl = $this->curlFactory->create();
+                // $curl = $this->curlFactory->create();
 
-                $curl->write($method, $url, '1.1', $headersConfig, $body);
+                // $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
 
-                $result = ['success' => false];
+                // $result = ['success' => false];
 
-                try {
-                    $resultCurl         = $curl->read();
-                    $result['response'] = $resultCurl;
-                    if (!empty($resultCurl)) {
-                        $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-                        if (isset($result['status']) && $this->helper->isSuccess($result['status'])) {
-                            $result['success'] = true;
-                        } else {
-                            $result['message'] = __('Cannot connect to server. Please try again later.');
-                        }
-                    } else {
-                        $result['message'] = __('Cannot connect to server. Please try again later.');
-                    }
-                } catch (Exception $e) {
-                    $result['message'] = $e->getMessage();
-                }
-                $curl->close();
+                // try {
+                //     $resultCurl         = $curl->read();
+                //     $result['response'] = $resultCurl;
+                //     if (!empty($resultCurl)) {
+                //         $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                //         if (isset($result['status']) && $this->helper->isSuccess($result['status'])) {
+                //             $result['success'] = true;
+                //         } else {
+                //             $result['message'] = __('Cannot connect to server. Please try again later.');
+                //         }
+                //     } else {
+                //         $result['message'] = __('Cannot connect to server. Please try again later.');
+                //     }
+                //     $this->logger->debug('Webhook Success ' . json_encode($result));
+                // } catch (Exception $e) {
+                //     $result['message'] = $e->getMessage();
+                //     $this->logger->debug('Error while sending data to webhook ' . json_encode($result));
+                // }
+                // $curl->close();
+                $client = new \GuzzleHttp\Client();
+                $result = $client->request($method, $url, [
+                    'verify' => false,
+                    'headers'   => [
+                        'Content-Type'  => 'application/json',
+                        'Accept'        => 'application/json',
+                        'X-API-KEY'     => $this->helper->getConfigGeneral('blueoshan/connection/integration')
+                    ],
+                    'json' => json_encode($body)
+                ]);
             }
             foreach ($noneUpdateQuoteCollection as $quote) {
                 $output = $this->helper->objToArray($quote);
@@ -188,7 +212,7 @@ class AbandonedCart
                 if ($quoteIdMask->getMaskedId() === null) {
                     $quoteIdMask->setQuoteId($quote->getId())->save();
                     $maskedQuoteId = $quoteIdMask->getMaskedId();
-                }
+                }                
                 $output['shipping_address'] = $this->helper->objToArray($quote->getShippingAddress());
                 $output['billing_address'] = $this->helper->objToArray($quote->getBillingAddress());
                 $output['abandoned_cart_url'] = $this->storeManager->getStore(
@@ -209,40 +233,27 @@ class AbandonedCart
                     "websiteId" => $websiteId,
                     "storeId" => $storeId,
                     "storeCode" => $storeCode,
-                    "storeURL" => (isset($stores[$storeId]['store_url']))?  $stores[$storeId]['store_url']: $this->getBaseUrl(),
-                    "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->getMediaUrl()
+                    "storeName" => $storeName,
+                    "storeURL" => (isset($stores[$storeId]['store_url']))?  $stores[$storeId]['store_url']: $this->helper->getBaseUrl(),
+                    "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->helper->getMediaUrl()
                 ];
                 $url = $this->helper->getConfigGeneral('blueoshan/webhook/hook_url');
         
                 $method = 'POST';
                 
-                $headersConfig[] = 'Content-Type: application/json';
-                
-                $curl = $this->curlFactory->create();
-
-                $curl->write($method, $url, '1.1', $headersConfig, $body);
-
-                $result = ['success' => false];
-
-                try {
-                    $resultCurl         = $curl->read();
-                    $result['response'] = $resultCurl;
-                    if (!empty($resultCurl)) {
-                        $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-                        if (isset($result['status']) && $this->helper->isSuccess($result['status'])) {
-                            $result['success'] = true;
-                        } else {
-                            $result['message'] = __('Cannot connect to server. Please try again later.');
-                        }
-                    } else {
-                        $result['message'] = __('Cannot connect to server. Please try again later.');
-                    }
-                } catch (Exception $e) {
-                    $result['message'] = $e->getMessage();
-                }
-                $curl->close();
+                $client = new \GuzzleHttp\Client();
+                $result = $client->request($method, $url, [
+                    'verify' => false,
+                    'headers'   => [
+                        'Content-Type'  => 'application/json',
+                        'Accept'        => 'application/json',
+                        'X-API-KEY'     => $this->helper->getConfigGeneral('blueoshan/connection/integration')
+                    ],
+                    'json' => json_encode($body)
+                ]);
             }
         } catch (Exception $e) {
+            $this->logger->debug('Abandoned cart webhook error ' . $e->getMessage());
             $this->logger->critical($e->getMessage());
         }
     }

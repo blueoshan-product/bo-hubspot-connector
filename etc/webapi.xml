@@ -4,7 +4,19 @@
     <route url="/V1/blueoshan/getAttributes" method="POST">
         <service class="Blueoshan\HubspotConnector\Api\AttributeInterface" method="getAttributes" />
         <resources>
-            <resource ref="anonymous" />
+            <resource ref="admin" />
+        </resources>
+    </route>
+    <route url="/V1/blueoshan/getOrderStatuses" method="GET">
+        <service class="Blueoshan\HubspotConnector\Api\OrderStatusInterface" method="getOrderStatuses" />
+        <resources>
+            <resource ref="admin" />
+        </resources>
+    </route>
+    <route url="/V1/blueoshan/getAbandonedCart" method="POST">
+        <service class="Blueoshan\HubspotConnector\Api\AbandonedCartInterface" method="getAbandonedCart" />
+        <resources>
+            <resource ref="admin" />
         </resources>
     </route>
 </routes>
