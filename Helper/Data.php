@@ -7,6 +7,7 @@ use Magento\Framework\App\ProductMetadataInterface;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Customer\Api\CustomerRepositoryInterface;
+use Magento\Customer\Model\ResourceModel\Group\Collection as CustomerGroupCollection;
 use Magento\Framework\App\Area;
 use Magento\Framework\App\Helper\Context;
 use Magento\Framework\Exception\LocalizedException;
@@ -36,6 +37,12 @@ class Data extends AbstractHelper
     protected $logger;
 
     /**
+     *
+     * @var CustomerGroupCollection
+     */
+    protected $customerGroup;
+
+    /**
      * @var TransportBuilder
      */
     protected $transportBuilder;
@@ -61,6 +68,7 @@ class Data extends AbstractHelper
      * @param ObjectManagerInterface $objectManager
      * @param StoreManagerInterface $storeManager
      * @param UrlInterface $backendUrl
+     * @param CustomerGroupCollection $customerGroup
      * @param TransportBuilder $transportBuilder
      * @param CurlFactory $curlFactory
      * @param ProductMetadataInterface $metaData
@@ -69,6 +77,7 @@ class Data extends AbstractHelper
     public function __construct(
         Context $context,
         ObjectManagerInterface $objectManager,
+        CustomerGroupCollection $customerGroup,
         StoreManagerInterface $storeManager,
         UrlInterface $backendUrl,
         TransportBuilder $transportBuilder,
@@ -79,6 +88,7 @@ class Data extends AbstractHelper
     ) {
         $this->transportBuilder = $transportBuilder;
         $this->backendUrl       = $backendUrl;
+        $this->customerGroup = $customerGroup;
         $this->customer         = $customer;
         $this->storeManager     = $storeManager;
         $this->metaData = $metaData;
@@ -105,7 +115,7 @@ class Data extends AbstractHelper
         return $this->storeManager->getStore()->getId();
     }
     /**
-     * Get website id
+     * Website Id
      *
      * @return int
      */
@@ -115,7 +125,7 @@ class Data extends AbstractHelper
     }
 
     /**
-     * Get store code
+     * Store Code
      *
      * @return string
      */
@@ -125,7 +135,7 @@ class Data extends AbstractHelper
     }
 
     /**
-     * Get application base url
+     * Store URL
      *
      * @return string
      */
@@ -135,7 +145,17 @@ class Data extends AbstractHelper
     }
 
     /**
-     * Get module user key
+     * Store Name
+     *
+     * @return string
+     */
+    public function getStoreName()
+    {
+        return $this->storeManager->getStore()->getName();
+    }
+
+    /**
+     * Store Media URL
      *
      * @return string
      */
@@ -145,7 +165,7 @@ class Data extends AbstractHelper
     }
 
     /**
-     * Get application store object
+     * Store Object
      *
      * @return \Magento\Store\Api\Data\StoreInterface
      */
@@ -188,34 +208,47 @@ class Data extends AbstractHelper
         $method = 'POST';
         
         $headersConfig[] = 'Content-Type: application/json';
-        $headersConfig[] = 'X-MAGENTOSTORE-VERSION : ' .$this->metaData->getVersion();
-        $headersConfig[] = 'X-ROOT-DOMAIN : '. $this->storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_WEB);
-
+        $headersConfig[] = 'X-API-KEY : ' .$this->getConfigGeneral('blueoshan/connection/integration');
+        
         $body = $this->generateBody($item);
+        $this->logger->debug('Final Data is ' . $body);
 
-        $curl = $this->curlFactory->create();
+        // $curl = $this->curlFactory->create();
 
-        $curl->write($method, $url, '1.1', $headersConfig, $body);
+        // $curl->write($method, $url, '1.1', $headersConfig, $body);
+        // $this->logger->debug('CURL Data is ' . json_encode($curl));
+        // $result = ['success' => false];
 
-        $result = ['success' => false];
-
-        try {
-            $resultCurl         = $curl->read();
-            $result['response'] = $resultCurl;
-            if (!empty($resultCurl)) {
-                $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-                if (isset($result['status']) && $this->isSuccess($result['status'])) {
-                    $result['success'] = true;
-                } else {
-                    $result['message'] = __('Cannot connect to server. Please try again later.');
-                }
-            } else {
-                $result['message'] = __('Cannot connect to server. Please try again later.');
-            }
-        } catch (Exception $e) {
-            $result['message'] = $e->getMessage();
-        }
-        $curl->close();
+        // try {
+        //     $resultCurl         = $curl->read();
+        //     $result['response'] = $resultCurl;
+        //     if (!empty($resultCurl)) {
+        //         $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+        //         if (isset($result['status']) && $this->isSuccess($result['status'])) {
+        //             $result['success'] = true;
+        //         } else {
+        //             $result['message'] = __('Cannot connect to server. Please try again later.');
+        //         }
+        //     } else {
+        //         $result['message'] = __('Cannot connect to server. Please try again later.');
+        //     }
+        //     $this->logger->debug('Webhook Success ' . json_encode($result));
+        // } catch (Exception $e) {
+        //     $result['message'] = $e->getMessage();
+        //     $this->logger->debug('Error while sending data to webhook ' . json_encode($result));
+        // }
+        // $curl->close();
+        
+        $client = new \GuzzleHttp\Client();
+        $result = $client->request($method, $url, [
+            'verify' => false,
+            'headers'   => [
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
+                'X-API-KEY'     => $this->getConfigGeneral('blueoshan/connection/integration')
+            ],
+            'json' => $body
+        ]);
 
         return $result;
     }
@@ -224,14 +257,16 @@ class Data extends AbstractHelper
         $websiteId = $this->getWebsiteId();
         $storeId = $this->getStoreId();
         $storeCode = $this->getStoreCode();
+        $storeName = $this->getStoreName();
         $stores=$this->getStores();
         $body = array();
+        $eventName = $item->getEvent()->getName();
         $body["eventName"] = $item->getEvent()->getName();
         $data = $this->objToArray($item->getDataObject());
-        if($item->getEvent()->getName() == "customer_login"){
+        if($eventName == "customer_login"){
             $data = $this->objToArray($item->getCustomer());
         }
-        if($item->getEvent()->getName() != "customer_login"){
+        if($eventName != "customer_login"){
             if (method_exists($item->getDataObject(),'getShippingAddress')) {
                 $data["shipping_address"] = $this->objToArray($item->getDataObject()->getShippingAddress());
             }
@@ -245,26 +280,21 @@ class Data extends AbstractHelper
                 }
             }
         }
-        // if (method_exists($item->getDataObject(),'getPayment')) {
-        //     $data['payments'] = $this->objToArray($item->getDataObject()->getPayment());
-        // }
-        // if(method_exists($item->getDataObject(),'getTracks')){
-        //     $data['tracks'] = $this->objToArray($item->getDataObject()->getTracks());
-        // }
-        // if($item->getDataObject()->getTracksCollection()){
-        //     $data->setData('shipmentTracks', $data->getTracksCollection()->getData());
-        // }
-        // if(method_exists($item->getDataObject(),'getPackages')){
-        //     $data['packages'] = $this->objToArray($item->getDataObject()->getPackages());
-        // }
-        // if (method_exists($item->getDataObject(),'getShipmentsCollection')) {
-        //     $data['shipments'] = $this->objToArray($item->getDataObject()->getShipmentsCollection());
-        // }
+        if($eventName == "sales_order_save_after" || $eventName == "sales_order_shipment_save_after"){
+            if (method_exists($item->getDataObject(),'getPayment')) {
+                $data['payments'] = $this->objToArray($item->getDataObject()->getPayment());
+            }
+            if(method_exists($item->getDataObject(),'getTracksCollection')){
+                $data['tracks'] = $this->objToArray($item->getDataObject()->getData());
+            }
+        }
         $body["data"] = $data;
         $body["storeData"] = [
             "websiteId" => $websiteId,
             "storeId" => $storeId,
             "storeCode" => $storeCode,
+            "storeName" => $storeName,
+            "storeVersion" => $this->metaData->getVersion(),
             "storeURL" => (isset($stores[$storeId]['store_url']))?  $stores[$storeId]['store_url']: $this->getBaseUrl(),
             "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->getMediaUrl()
         ];
@@ -339,6 +369,20 @@ class Data extends AbstractHelper
             'blueoshan/connection/enabled',
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
+    }
+    /**
+     * Customer Group
+     *
+     * @return array
+     */
+    public function getCustomerGroups()
+    {
+        $output = array();
+
+        foreach ($this->customerGroup as $group) {
+            $output[$group->getId()] = $group->getCustomerGroupCode();
+        }
+        return $output;
     }
 
     public function getConfigGeneral($path)
