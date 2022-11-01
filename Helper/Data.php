@@ -192,6 +192,7 @@ class Data extends AbstractHelper
         }
         return $result;
     }
+
     /**
      * @param $body
      * @param $method
@@ -207,45 +208,17 @@ class Data extends AbstractHelper
         
         $method = 'POST';
         
-        $headersConfig[] = 'Content-Type: application/json';
-        $headersConfig[] = 'X-API-KEY : ' .$this->getConfigGeneral('blueoshan/connection/integration');
-        
         $body = $this->generateBody($item);
         $this->logger->debug('Final Data is ' . $body);
-
-        // $curl = $this->curlFactory->create();
-
-        // $curl->write($method, $url, '1.1', $headersConfig, $body);
-        // $this->logger->debug('CURL Data is ' . json_encode($curl));
-        // $result = ['success' => false];
-
-        // try {
-        //     $resultCurl         = $curl->read();
-        //     $result['response'] = $resultCurl;
-        //     if (!empty($resultCurl)) {
-        //         $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-        //         if (isset($result['status']) && $this->isSuccess($result['status'])) {
-        //             $result['success'] = true;
-        //         } else {
-        //             $result['message'] = __('Cannot connect to server. Please try again later.');
-        //         }
-        //     } else {
-        //         $result['message'] = __('Cannot connect to server. Please try again later.');
-        //     }
-        //     $this->logger->debug('Webhook Success ' . json_encode($result));
-        // } catch (Exception $e) {
-        //     $result['message'] = $e->getMessage();
-        //     $this->logger->debug('Error while sending data to webhook ' . json_encode($result));
-        // }
-        // $curl->close();
         
         $client = new \GuzzleHttp\Client();
+        
         $result = $client->request($method, $url, [
             'verify' => false,
             'headers'   => [
                 'Content-Type'  => 'application/json',
                 'Accept'        => 'application/json',
-                'X-API-KEY'     => $this->getConfigGeneral('blueoshan/connection/integration')
+                'X-APP-KEY'     => $this->getConfigGeneral('blueoshan/connection/apptoken')
             ],
             'json' => $body
         ]);

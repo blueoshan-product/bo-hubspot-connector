@@ -9,18 +9,18 @@
             <tab>blueoshan</tab>
             <resource>Blueoshan_SampleModule::blueoshan</resource>
             <group id="connection" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
-                <label>Item Creation by Schedule</label>
+                <label>Connector Settings</label>
                 <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Enable HubSpot Connector</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
-                <field id="integration" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1"
+                <field id="apptoken" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1"
                        showInStore="1">
-                    <label>Blueoshan Integration Identifier</label>
+                    <label>Blueoshan Connector Access Token</label>
                     <depends>
                         <field id="blueoshan/connection/enabled">1</field>
                     </depends>
-                    <comment>This will be filled in by Blueoshan API when the store is connected to Blueoshan account.</comment>
+                    <comment>This value will be auto populated by the Blueoshan Magento Connector App after the successfull magento Connection. We can also find this value in the sync settings dashboard of the App.</comment>
                 </field>
             </group>
             <group id="webhook" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1"

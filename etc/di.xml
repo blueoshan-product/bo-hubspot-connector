@@ -2,4 +2,5 @@
     <preference for="Blueoshan\HubspotConnector\Api\AttributeInterface" type="Blueoshan\HubspotConnector\Model\Api\AttributeInterface" />
     <preference for="Blueoshan\HubspotConnector\Api\OrderStatusInterface" type="Blueoshan\HubspotConnector\Model\Api\OrderStatusInterface" />
     <preference for="Blueoshan\HubspotConnector\Api\AbandonedCartInterface" type="Blueoshan\HubspotConnector\Model\Api\AbandonedCartInterface" />
+    <preference for="Blueoshan\HubspotConnector\Api\ConnectorInterface" type="Blueoshan\HubspotConnector\Model\Api\ConnectorInterface" />
 </config>
