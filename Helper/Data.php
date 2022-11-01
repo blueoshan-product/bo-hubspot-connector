@@ -210,18 +210,43 @@ class Data extends AbstractHelper
         
         $body = $this->generateBody($item);
         $this->logger->debug('Final Data is ' . $body);
+        $headersConfig = [];
+        $headersConfig[] = 'X-APP-KEY: ' . $this->getConfigGeneral('blueoshan/connection/apptoken');
+        $headersConfig[] = 'Content-Type: application/json';
+        $curl = $this->curlFactory->create();
         
-        $client = new \GuzzleHttp\Client();
+        $curl->write($method, $url, '1.1', $headersConfig, $body);
+
+        $result = ['success' => false];
+
+        try {
+            $resultCurl         = $curl->read();
+            $result['response'] = $resultCurl;
+            if (!empty($resultCurl)) {
+                $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                    $result['success'] = true;
+                } else {
+                    $result['message'] = __('Cannot connect to server. Please try again later.');
+                }
+            } else {
+                $result['message'] = __('Cannot connect to server. Please try again later.');
+            }
+        } catch (Exception $e) {
+            $result['message'] = $e->getMessage();
+        }
+        $curl->close();
+        // $client = new \GuzzleHttp\Client();
         
-        $result = $client->request($method, $url, [
-            'verify' => false,
-            'headers'   => [
-                'Content-Type'  => 'application/json',
-                'Accept'        => 'application/json',
-                'X-APP-KEY'     => $this->getConfigGeneral('blueoshan/connection/apptoken')
-            ],
-            'json' => $body
-        ]);
+        // $result = $client->request($method, $url, [
+        //     'verify' => false,
+        //     'headers'   => [
+        //         'Content-Type'  => 'application/json',
+        //         'Accept'        => 'application/json',
+        //         'X-APP-KEY'     => $this->getConfigGeneral('blueoshan/connection/apptoken')
+        //     ],
+        //     'json' => $body
+        // ]);
 
         return $result;
     }

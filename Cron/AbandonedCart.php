@@ -166,17 +166,44 @@ class AbandonedCart
                 $url = $this->helper->getConfigGeneral('blueoshan/webhook/hook_url');
         
                 $method = 'POST';
+
+                $headersConfig = [];
+                $headersConfig[] = 'X-APP-KEY: ' . $this->helper->getConfigGeneral('blueoshan/connection/apptoken');
+                $headersConfig[] = 'Content-Type: application/json';
+                $curl = $this->curlFactory->create();
                 
-                $client = new \GuzzleHttp\Client();
-                $result = $client->request($method, $url, [
-                    'verify' => false,
-                    'headers'   => [
-                        'Content-Type'  => 'application/json',
-                        'Accept'        => 'application/json',
-                        'X-APP-KEY'     => $this->helper->getConfigGeneral('blueoshan/connection/apptoken')
-                    ],
-                    'json' => json_encode($body)
-                ]);
+                $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
+
+                $result = ['success' => false];
+
+                try {
+                    $resultCurl         = $curl->read();
+                    $result['response'] = $resultCurl;
+                    if (!empty($resultCurl)) {
+                        $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                        if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                            $result['success'] = true;
+                        } else {
+                            $result['message'] = __('Cannot connect to server. Please try again later.');
+                        }
+                    } else {
+                        $result['message'] = __('Cannot connect to server. Please try again later.');
+                    }
+                } catch (Exception $e) {
+                    $result['message'] = $e->getMessage();
+                }
+                $curl->close();
+                
+                // $client = new \GuzzleHttp\Client();
+                // $result = $client->request($method, $url, [
+                //     'verify' => false,
+                //     'headers'   => [
+                //         'Content-Type'  => 'application/json',
+                //         'Accept'        => 'application/json',
+                //         'X-APP-KEY'     => $this->helper->getConfigGeneral('blueoshan/connection/apptoken')
+                //     ],
+                //     'json' => json_encode($body)
+                // ]);
             }
             foreach ($noneUpdateQuoteCollection as $quote) {
                 $output = $this->helper->objToArray($quote);
@@ -213,17 +240,42 @@ class AbandonedCart
                 $url = $this->helper->getConfigGeneral('blueoshan/webhook/hook_url');
         
                 $method = 'POST';
+                $headersConfig = [];
+                $headersConfig[] = 'X-APP-KEY: ' . $this->helper->getConfigGeneral('blueoshan/connection/apptoken');
+                $headersConfig[] = 'Content-Type: application/json';
+                $curl = $this->curlFactory->create();
                 
-                $client = new \GuzzleHttp\Client();
-                $result = $client->request($method, $url, [
-                    'verify' => false,
-                    'headers'   => [
-                        'Content-Type'  => 'application/json',
-                        'Accept'        => 'application/json',
-                        'X-APP-KEY'     => $this->helper->getConfigGeneral('blueoshan/connection/apptoken')
-                    ],
-                    'json' => json_encode($body)
-                ]);
+                $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
+
+                $result = ['success' => false];
+
+                try {
+                    $resultCurl         = $curl->read();
+                    $result['response'] = $resultCurl;
+                    if (!empty($resultCurl)) {
+                        $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                        if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                            $result['success'] = true;
+                        } else {
+                            $result['message'] = __('Cannot connect to server. Please try again later.');
+                        }
+                    } else {
+                        $result['message'] = __('Cannot connect to server. Please try again later.');
+                    }
+                } catch (Exception $e) {
+                    $result['message'] = $e->getMessage();
+                }
+                $curl->close();
+                // $client = new \GuzzleHttp\Client();
+                // $result = $client->request($method, $url, [
+                //     'verify' => false,
+                //     'headers'   => [
+                //         'Content-Type'  => 'application/json',
+                //         'Accept'        => 'application/json',
+                //         'X-APP-KEY'     => $this->helper->getConfigGeneral('blueoshan/connection/apptoken')
+                //     ],
+                //     'json' => json_encode($body)
+                // ]);
             }
         } catch (Exception $e) {
             $this->logger->debug('Abandoned cart webhook error ' . $e->getMessage());
