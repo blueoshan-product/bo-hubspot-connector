@@ -25,4 +25,10 @@
             <resource ref="admin" />
         </resources>
     </route>
+    <route url="/V1/blueoshan/updateHubId" method="POST">
+        <service class="Blueoshan\HubspotConnector\Api\RecordInterface" method="updateHubId" />
+        <resources>
+            <resource ref="admin" />
+        </resources>
+    </route>
 </routes>

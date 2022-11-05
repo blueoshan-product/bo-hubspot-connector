@@ -5,7 +5,7 @@ namespace Blueoshan\HubspotConnector\Api;
 interface ConnectorInterface
 {
     /**
-     * GET for Post api
+     * Store APP Token
      * @param string $token
      * @return string
      */

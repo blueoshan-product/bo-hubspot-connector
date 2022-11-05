@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="catalog_product_entity" resource="default">
+        <column xsi:type="varchar" name="hub_record_id" nullable="true" length="255" comment="HubSpot Record Id" />
+    </table>
+    <table name="customer_entity" resource="default">
+        <column xsi:type="varchar" name="hub_record_id" nullable="true" length="255" comment="HubSpot Record Id" />
+    </table>
+    <table name="sales_order" resource="default">
+        <column xsi:type="varchar" name="hub_record_id" nullable="true" length="255" comment="HubSpot Record Id" />
+    </table>
+    <table name="quote" resource="default">
+        <column xsi:type="varchar" name="hub_record_id" nullable="true" length="255" comment="HubSpot Record Id" />
+    </table>
+</schema>

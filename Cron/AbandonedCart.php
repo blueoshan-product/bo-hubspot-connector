@@ -108,7 +108,7 @@ class AbandonedCart
         $body = array();
         $body["eventName"] = "abandoned_cart";
         $customerGroups = $this->helper->getCustomerGroups();
-        $this->logger->debug(json_encode($customerGroups));
+        $this->logger->debug('Customer Group is '. json_encode($customerGroups));
         $abandonedTime = (int)$this->helper->getConfigGeneral('blueoshan/webhook/abandoned_time');
         $this->logger->debug('Abandoned Time is '.$abandonedTime);
         $update = (new DateTime())->sub(new DateInterval("PT{$abandonedTime}H"));
@@ -153,6 +153,12 @@ class AbandonedCart
                 foreach ($quote->getAllItems() as $item) {
                         $output['items'][] = $this->helper->objToArray($item);
                 }
+                $groupId = (int) $quote->getCustomerGroupId();
+                if (isset($customerGroups[$groupId])) {
+                    $output['customer_group'] = $customerGroups[$groupId];
+                } else {
+                    $output['customer_group'] = 'Guest';
+                }
                 $body["data"] = $output;
                 $this->logger->debug('Abandoned cart is' . json_encode($output));
                 $body["storeData"] = [
@@ -193,17 +199,6 @@ class AbandonedCart
                     $result['message'] = $e->getMessage();
                 }
                 $curl->close();
-                
-                // $client = new \GuzzleHttp\Client();
-                // $result = $client->request($method, $url, [
-                //     'verify' => false,
-                //     'headers'   => [
-                //         'Content-Type'  => 'application/json',
-                //         'Accept'        => 'application/json',
-                //         'X-APP-KEY'     => $this->helper->getConfigGeneral('blueoshan/connection/apptoken')
-                //     ],
-                //     'json' => json_encode($body)
-                // ]);
             }
             foreach ($noneUpdateQuoteCollection as $quote) {
                 $output = $this->helper->objToArray($quote);
@@ -212,7 +207,7 @@ class AbandonedCart
                 if ($quoteIdMask->getMaskedId() === null) {
                     $quoteIdMask->setQuoteId($quote->getId())->save();
                     $maskedQuoteId = $quoteIdMask->getMaskedId();
-                }                
+                }
                 $output['shipping_address'] = $this->helper->objToArray($quote->getShippingAddress());
                 $output['billing_address'] = $this->helper->objToArray($quote->getBillingAddress());
                 $output['abandoned_cart_url'] = $this->storeManager->getStore(
@@ -227,6 +222,12 @@ class AbandonedCart
                 foreach ($quote->getAllItems() as $item) {
                         $output['items'][] = $this->helper->objToArray($item);
                 }
+                $groupId = (int) $quote->getCustomerGroupId();
+                if (isset($customerGroups[$groupId])) {
+                    $output['customer_group'] = $customerGroups[$groupId];
+                } else {
+                    $output['customer_group'] = 'Guest';
+                }
                 $body["data"] = $output;
                 $this->logger->debug('Abandoned cart is' . json_encode($output));
                 $body["storeData"] = [
@@ -240,6 +241,7 @@ class AbandonedCart
                 $url = $this->helper->getConfigGeneral('blueoshan/webhook/hook_url');
         
                 $method = 'POST';
+
                 $headersConfig = [];
                 $headersConfig[] = 'X-APP-KEY: ' . $this->helper->getConfigGeneral('blueoshan/connection/apptoken');
                 $headersConfig[] = 'Content-Type: application/json';
@@ -266,16 +268,6 @@ class AbandonedCart
                     $result['message'] = $e->getMessage();
                 }
                 $curl->close();
-                // $client = new \GuzzleHttp\Client();
-                // $result = $client->request($method, $url, [
-                //     'verify' => false,
-                //     'headers'   => [
-                //         'Content-Type'  => 'application/json',
-                //         'Accept'        => 'application/json',
-                //         'X-APP-KEY'     => $this->helper->getConfigGeneral('blueoshan/connection/apptoken')
-                //     ],
-                //     'json' => json_encode($body)
-                // ]);
             }
         } catch (Exception $e) {
             $this->logger->debug('Abandoned cart webhook error ' . $e->getMessage());

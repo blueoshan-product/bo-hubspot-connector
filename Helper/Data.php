@@ -2,23 +2,21 @@
 
 namespace Blueoshan\HubspotConnector\Helper;
 use Exception;
+use DateTime;
 use Magento\Backend\Model\UrlInterface;
 use Magento\Framework\App\ProductMetadataInterface;
 use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Quote\Model\QuoteIdMaskFactory;
+use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Model\ResourceModel\Group\Collection as CustomerGroupCollection;
-use Magento\Framework\App\Area;
 use Magento\Framework\App\Helper\Context;
-use Magento\Framework\Exception\LocalizedException;
-use Magento\Framework\Exception\MailException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\HTTP\Adapter\CurlFactory;
 use Magento\Framework\Mail\Template\TransportBuilder;
 use Magento\Framework\ObjectManagerInterface;
-use Magento\Store\Model\Store;
 use Magento\Store\Model\StoreManagerInterface;
-use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Helper\AbstractHelper;
 use Psr\Log\LoggerInterface;
 use Zend_Http_Response;
@@ -60,6 +58,14 @@ class Data extends AbstractHelper
      * @var ProductMetadataInterface
      */
     protected $metaData;
+    /**
+     * @var CartRepositoryInterface
+     */
+    protected $cartRepository;
+    /**
+     * @var QuoteIdMaskFactory
+     */
+    protected $quoteIdMaskFactory;
 
     /**
      * Data constructor.
@@ -72,6 +78,8 @@ class Data extends AbstractHelper
      * @param TransportBuilder $transportBuilder
      * @param CurlFactory $curlFactory
      * @param ProductMetadataInterface $metaData
+     * @param CartRepositoryInterface $cartRepository
+     * @param QuoteIdMaskFactory $quoteIdMaskFactory
      * @param CustomerRepositoryInterface $customer
      */
     public function __construct(
@@ -84,6 +92,8 @@ class Data extends AbstractHelper
         ProductMetadataInterface $metaData,
         CurlFactory $curlFactory,
         CustomerRepositoryInterface $customer,
+        CartRepositoryInterface $cartRepository,
+        QuoteIdMaskFactory $quoteIdMaskFactory,
         LoggerInterface $logger
     ) {
         $this->transportBuilder = $transportBuilder;
@@ -91,6 +101,8 @@ class Data extends AbstractHelper
         $this->customerGroup = $customerGroup;
         $this->customer         = $customer;
         $this->storeManager     = $storeManager;
+        $this->cartRepository = $cartRepository;
+        $this->quoteIdMaskFactory = $quoteIdMaskFactory;
         $this->metaData = $metaData;
         $this->curlFactory = $curlFactory;
         $this->logger = $logger;
@@ -194,8 +206,20 @@ class Data extends AbstractHelper
     }
 
     /**
+     * @param mixed $cartId
+     * @return CartInterface
+     * @throws NoSuchEntityException
+     */
+    public function getQuote($cartId)
+    {
+        $quoteIdMask = $this->quoteIdMaskFactory->create()->load($cartId, 'masked_id');
+        $cartId = $quoteIdMask->getQuoteId() ?: $cartId;
+
+        return $this->cartRepository->get($cartId);
+    }
+
+    /**
      * @param $body
-     * @param $method
      *
      * @return array
      */
@@ -204,7 +228,18 @@ class Data extends AbstractHelper
         if (!$this->isConnectorEnabled()) {
             return;
         }
-        $url = $this->getConfigGeneral('blueoshan/webhook/hook_url');
+
+        $eventName = $item->getEvent()->getName();
+        $endpoint = "";
+        if($eventName == "customer_save_after" || $eventName == "customer_address_save_after" || $eventName == "newsletter_subscriber_save_after"){
+            $endpoint = "customer_webhook";
+        }else if($eventName == "sales_order_save_after" || $eventName == "sales_order_status_history_save_after" || $eventName == "sales_order_shipment_save_after" || $eventName == "sales_order_invoice_save_after" || $eventName == "sales_quote_save_after" || $eventName == "quote_address_save_after"){
+            $endpoint = "order_webhook";
+        }else if($eventName == "catalog_product_save_after" || $eventName == "catalog_product_delete_before"){
+            $endpoint = "product_webhook";
+        }
+
+        $url = $this->getConfigGeneral('blueoshan/webhook/hook_url').'/'.$endpoint;
         
         $method = 'POST';
         
@@ -236,18 +271,52 @@ class Data extends AbstractHelper
             $result['message'] = $e->getMessage();
         }
         $curl->close();
-        // $client = new \GuzzleHttp\Client();
-        
-        // $result = $client->request($method, $url, [
-        //     'verify' => false,
-        //     'headers'   => [
-        //         'Content-Type'  => 'application/json',
-        //         'Accept'        => 'application/json',
-        //         'X-APP-KEY'     => $this->getConfigGeneral('blueoshan/connection/apptoken')
-        //     ],
-        //     'json' => $body
-        // ]);
 
+        return $result;
+    }
+    /**
+     * @param array $body
+     * 
+     * @return array
+     */
+    public function sendDataToHook($body)
+    {
+        if (!$this->isConnectorEnabled()) {
+            return;
+        }
+        
+
+        $url = $this->getConfigGeneral('blueoshan/webhook/hook_url').'/order_webhook';
+        
+        $method = 'POST';
+
+        $headersConfig = [];
+        $headersConfig[] = 'X-APP-KEY: ' . $this->getConfigGeneral('blueoshan/connection/apptoken');
+        $headersConfig[] = 'Content-Type: application/json';
+        $curl = $this->curlFactory->create();
+        
+        $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
+
+        $result = ['success' => false];
+
+        try {
+            $resultCurl         = $curl->read();
+            $result['response'] = $resultCurl;
+            if (!empty($resultCurl)) {
+                $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                    $result['success'] = true;
+                } else {
+                    $result['message'] = __('Cannot connect to server. Please try again later.');
+                }
+            } else {
+                $result['message'] = __('Cannot connect to server. Please try again later.');
+            }
+        } catch (Exception $e) {
+            $result['message'] = $e->getMessage();
+        }
+        $curl->close();
+        
         return $result;
     }
     public function generateBody($item)
@@ -257,35 +326,76 @@ class Data extends AbstractHelper
         $storeCode = $this->getStoreCode();
         $storeName = $this->getStoreName();
         $stores=$this->getStores();
+        $customerGroups = $this->getCustomerGroups();
         $body = array();
         $eventName = $item->getEvent()->getName();
+        $event = $item->getEvent();
         $body["eventName"] = $item->getEvent()->getName();
         $data = $this->objToArray($item->getDataObject());
-        if($eventName == "customer_login"){
+        if($eventName == "customer_login" || $eventName == "customer_save_after"){
             $data = $this->objToArray($item->getCustomer());
+            $customer = $item->getCustomer();
+            $groupId = (int) $customer->getCustomerGroupId();
+            if (isset($customerGroups[$groupId])) {
+                $data['customer_group'] = $customerGroups[$groupId];
+            } else {
+                $data['customer_group'] = 'Guest';
+            }
         }
         if($eventName != "customer_login"){
-            if (method_exists($item->getDataObject(),'getShippingAddress')) {
+            if (is_object( $item->getDataObject() ) && method_exists($item->getDataObject(),'getShippingAddress')) {
                 $data["shipping_address"] = $this->objToArray($item->getDataObject()->getShippingAddress());
             }
-            if (method_exists($item->getDataObject(),'getBillingAddress')) {
+            if (is_object( $item->getDataObject() ) && method_exists($item->getDataObject(),'getImage')) {
+                $data["product_image"] = $item->getDataObject()->getImage();
+            }
+            if (is_object( $item->getDataObject() ) && method_exists($item->getDataObject(),'getBillingAddress')) {
                 $data["billing_address"] = $this->objToArray($item->getDataObject()->getBillingAddress());
             }
-            if (method_exists($item->getDataObject(),'getAllItems')) {
+            if (is_object( $item->getDataObject() ) && method_exists($item->getDataObject(),'getAllItems')) {
                 $data['items'] = [];
                 foreach ($item->getDataObject()->getAllItems() as $item) {
                     $data['items'][] = $this->objToArray($item);
                 }
             }
         }
-        if($eventName == "sales_order_save_after" || $eventName == "sales_order_shipment_save_after"){
-            if (method_exists($item->getDataObject(),'getPayment')) {
-                $data['payments'] = $this->objToArray($item->getDataObject()->getPayment());
+        if($eventName == "sales_order_save_after"){
+            $order = $event->getOrder();
+            $data['payment_info'] = $this->objToArray($order->getPayment());
+            $tracksCollection = $order->getTracksCollection();
+            $data['trackCollection'] = [];
+            foreach ($tracksCollection->getItems() as $track) {
+                $data['trackCollection'][] = $this->objToArray($track);
             }
-            if(method_exists($item->getDataObject(),'getTracksCollection')){
-                $data['tracks'] = $this->objToArray($item->getDataObject()->getData());
+            $data['statusHistories'] = [];
+            foreach($order->getStatusHistories() as $history){
+                $data['statusHistories'][] = $this->objToArray($history);
+            }
+            $data['original_status'] = $order->getOrigData('status');
+            $groupId = (int) $order->getCustomerGroupId();
+            if (isset($customerGroups[$groupId])) {
+                $data['customer_group'] = $customerGroups[$groupId];
+            } else {
+                $data['customer_group'] = 'Guest';
             }
         }
+        $timestamp = new DateTime();
+        $timestamp->setTimezone(new \DateTimeZone('Asia/Kolkata')); 
+        $data['event_timestamp'] = $timestamp->format('Y-m-d H:i:s');
+        // if(is_object( $item->getDataObject() ) && method_exists($item->getDataObject(),'tracks')){
+        //     $data['tracks'] = $this->objToArray($item->getDataObject()->getTracksCollection());
+        // }
+        // if($eventName == "sales_order_shipment_save_after"){
+        //     $shipment = $item->getEvent()->getShipment();
+        //     $tracksCollection = $shipment->getTracksCollection();
+        //     $tracks = array();
+        //     foreach ($tracksCollection->getItems() as $track) {
+        //         $tracks['trackingNumber'] = $track->getTrackNumber();
+        //         $tracks['carrierName'] = $track->getTitle();
+        //     }
+        //     $data['trackCollection'] = $tracks;
+        // }
+        
         $body["data"] = $data;
         $body["storeData"] = [
             "websiteId" => $websiteId,

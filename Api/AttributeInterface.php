@@ -5,7 +5,7 @@ namespace Blueoshan\HubspotConnector\Api;
 interface AttributeInterface
 {
     /**
-     * GET for Post api
+     * GET Attributes List API
      * @param string $object
      * @return string
      */

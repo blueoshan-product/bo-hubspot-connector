@@ -5,7 +5,7 @@ namespace Blueoshan\HubspotConnector\Api;
 interface AbandonedCartInterface
 {
     /**
-     * GET for Post api
+     * Get Masked Id for Abandoned Cart
      * @param string $quoteId
      * @return string
      */

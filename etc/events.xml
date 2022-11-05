@@ -6,18 +6,12 @@
     <event name="sales_order_save_after">
         <observer name="bo_hook_order" instance="Blueoshan\HubspotConnector\Observer\AfterOrder"/>
     </event>
-    <event name="sales_order_status_history_save_after">
-        <observer name="bo_hook_before_order" instance="Blueoshan\HubspotConnector\Observer\AfterOrderComment"/>
-    </event>
-    <event name="sales_order_invoice_save_after">
+    <!-- <event name="sales_order_invoice_save_after">
         <observer name="bo_hook_new_invoice" instance="Blueoshan\HubspotConnector\Observer\AfterInvoice"/>
     </event>
     <event name="sales_order_shipment_save_after">
         <observer name="bo_hook_new_shipment" instance="Blueoshan\HubspotConnector\Observer\AfterShipment"/>
-    </event>
-    <event name="sales_order_creditmemo_save_after">
-        <observer name="bo_hook_new_creditmemo" instance="Blueoshan\HubspotConnector\Observer\AfterCreditmemo"/>
-    </event>
+    </event> -->
     <event name="customer_save_before">
         <observer name="bo_hook_save_customer_before" instance="Blueoshan\HubspotConnector\Observer\BeforeSave"/>
     </event>
@@ -39,19 +33,13 @@
     <event name="catalog_product_delete_before">
         <observer name="bo_hook_delete_product" instance="Blueoshan\HubspotConnector\Observer\BeforeDeleteProduct"/>
     </event>
-    <event name="catalog_category_save_before">
-        <observer name="bo_hook_category_save_before" instance="Blueoshan\HubspotConnector\Observer\BeforeSave"/>
-    </event>
-    <event name="catalog_category_save_after">
-        <observer name="bo_hook_category_save_after" instance="Blueoshan\HubspotConnector\Observer\AfterCategory"/>
-    </event>
-    <event name="catalog_category_delete_before">
-        <observer name="bo_hook_delete_product" instance="Blueoshan\HubspotConnector\Observer\BeforeDeleteCategory"/>
-    </event>
     <event name="customer_login">
         <observer name="bo_hook_customer_login" instance="Blueoshan\HubspotConnector\Observer\CustomerLogin"/>
     </event>
     <event name="newsletter_subscriber_save_after">
         <observer name="bo_hook_subscriber" instance="Blueoshan\HubspotConnector\Observer\Subscriber"/>
+    </event>
+    <event name="sales_quote_save_after">
+        <observer name="bo_hook_cart_save_after" instance="Blueoshan\HubspotConnector\Observer\AfterQuote"/>
     </event>
 </config>

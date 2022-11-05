@@ -5,7 +5,7 @@ namespace Blueoshan\HubspotConnector\Api;
 interface OrderStatusInterface
 {
     /**
-     * GET for get api
+     * Order Statuses API
      * @return string
      */
     public function getOrderStatuses();

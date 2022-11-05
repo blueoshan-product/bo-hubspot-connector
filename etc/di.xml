@@ -1,6 +1,26 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../lib/internal/Magento/Framework/ObjectManager/etc/config.xsd">
+    
     <preference for="Blueoshan\HubspotConnector\Api\AttributeInterface" type="Blueoshan\HubspotConnector\Model\Api\AttributeInterface" />
+    
     <preference for="Blueoshan\HubspotConnector\Api\OrderStatusInterface" type="Blueoshan\HubspotConnector\Model\Api\OrderStatusInterface" />
+    
     <preference for="Blueoshan\HubspotConnector\Api\AbandonedCartInterface" type="Blueoshan\HubspotConnector\Model\Api\AbandonedCartInterface" />
+    
     <preference for="Blueoshan\HubspotConnector\Api\ConnectorInterface" type="Blueoshan\HubspotConnector\Model\Api\ConnectorInterface" />
+    
+    <preference for="Blueoshan\HubspotConnector\Api\RecordInterface" type="Blueoshan\HubspotConnector\Model\Api\RecordInterface" />
+    
+    <!-- Cart Address Save Hook -->
+    <type name="Magento\Checkout\Model\ShippingInformationManagement">
+        <plugin name="bo_get_address" type="Blueoshan\HubspotConnector\Plugin\SaveAddressPlugin" sortOrder="1"/>
+    </type>
+    <!-- <type name="Magento\Checkout\Model\Cart">
+        <plugin name="blueoshan_quote_hook" type="Blueoshan\HubspotConnector\Plugin\SaveCartPlugin" sortOrder="99"/>
+    </type> -->
+    <!-- <type name="Magento\Newsletter\Model\Subscriber">
+        <plugin name="blueoshan_subscriber_hook" type="Blueoshan\HubcpotConnector\Plugin\SaveSubscriberPlugin" sortOrder="99"/>
+    </type>
+    <type name="Magento\Customer\Api\CustomerRepositoryInterface">
+        <plugin name="blueoshan_customer_hook" type="Blueoshan\HubcpotConnector\Plugin\SaveCustomerPlugin" sortOrder="99"/>
+    </type> -->
 </config>

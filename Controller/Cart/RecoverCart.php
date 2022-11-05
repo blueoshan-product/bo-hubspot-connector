@@ -7,7 +7,6 @@ use Magento\Framework\App\Action\Context;
 use Magento\Checkout\Model\Session;
 use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Quote\Model\QuoteIdMaskFactory;
-use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Exception\LocalizedException;
 
 class RecoverCart extends Action
@@ -39,15 +38,12 @@ class RecoverCart extends Action
 
     public function execute()
     {
-     if(!$this->getRequest()->getParam('token')){
-        throw new LocalizedException('No Cart token provided'); 
-     }   
+        if(!$this->getRequest()->getParam('token')){
+            throw new LocalizedException('No Cart token provided'); 
+        }   
         $quoteId = $this->quoteIdMaskFactory->create()->load($this->getRequest()->getParam('token'), 'masked_id');
         $quote = $this->cartRepository->getActive($quoteId->getQuoteId());
-        // if (!$quote->getIsActive()) {
-        //     $quote->setIsActive(true);
-        //     $this->cartRepository->save($quote);
-        // }
+
         if ($quote !== null) {
             $this->checkoutSession->setQuoteId($quote->getId());
         } else {
