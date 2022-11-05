@@ -42,4 +42,7 @@
     <event name="sales_quote_save_after">
         <observer name="bo_hook_cart_save_after" instance="Blueoshan\HubspotConnector\Observer\AfterQuote"/>
     </event>
+    <event name="sales_quote_save_before">
+        <observer name="bo_hook_cart_save_before" instance="Blueoshan\HubspotConnector\Observer\BeforeSave"/>
+    </event>
 </config>
