@@ -372,6 +372,7 @@ class Data extends AbstractHelper
                 $data['statusHistories'][] = $this->objToArray($history);
             }
             $data['original_status'] = $order->getOrigData('status');
+            $data['original_state'] = $order->getOrigData('state');
             $groupId = (int) $order->getCustomerGroupId();
             if (isset($customerGroups[$groupId])) {
                 $data['customer_group'] = $customerGroups[$groupId];
