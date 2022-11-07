@@ -97,7 +97,7 @@ class AbandonedCart
      */
     public function execute()
     {
-        if (!$this->helper->isConnectorEnabled()) {
+        if (!$this->helper->isConnectorEnabled($this->helper->getStoreId())) {
             return;
         }
         $websiteId = $this->helper->getWebsiteId();
@@ -119,9 +119,7 @@ class AbandonedCart
 
         /** @var Collection $quoteCollection */
         $quoteCollection = $this->quoteFactory->create()->getCollection()
-            ->addFieldToFilter('is_active', 1)
-            ->addFieldToFilter('updated_at', ['from' => $updateFrom])
-            ->addFieldToFilter('updated_at', ['to' => $updateTo]);
+            ->addFieldToFilter('is_active', 1);
 
         /** @var Collection $noneUpdateQuoteCollection */
         $noneUpdateQuoteCollection = $this->quoteFactory->create()->getCollection()

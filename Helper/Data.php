@@ -225,7 +225,7 @@ class Data extends AbstractHelper
      */
     public function sendHttpRequest($item)
     {
-        if (!$this->isConnectorEnabled()) {
+        if (!$this->isConnectorEnabled($this->getStoreId())) {
             return;
         }
 
@@ -281,7 +281,7 @@ class Data extends AbstractHelper
      */
     public function sendDataToHook($body)
     {
-        if (!$this->isConnectorEnabled()) {
+        if (!$this->isConnectorEnabled($this->getStoreId())) {
             return;
         }
         
@@ -472,11 +472,12 @@ class Data extends AbstractHelper
      *
      * @return int
      */
-    public function isConnectorEnabled()
+    public function isConnectorEnabled($storeId = null)
     {
         return (int) $this->scopeConfig->getValue(
             'blueoshan/connection/enabled',
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+            $storeId
         );
     }
     /**
