@@ -227,9 +227,15 @@ class Data extends AbstractHelper
     {
         $eventName = $item->getEvent()->getName();
 
-        if($eventName != "catalog_product_save_after" && $eventName != "catalog_product_delete_before"){
-            if (!$this->isConnectorEnabled($item->getDataObject()->getStoreId())) {
+        if($eventName == "customer_login" || $eventName == "customer_save_after"){
+            if (!$this->isConnectorEnabled($item->getCustomer()->getStoreId())) {
                 return;
+            }
+        }else{
+            if($eventName != "catalog_product_save_after" && $eventName != "catalog_product_delete_before"){
+                if (!$this->isConnectorEnabled($item->getDataObject()->getStoreId())) {
+                    return;
+                }
             }
         }
         
