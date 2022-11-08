@@ -97,9 +97,7 @@ class AbandonedCart
      */
     public function execute()
     {
-        if (!$this->helper->isConnectorEnabled($this->helper->getStoreId())) {
-            return;
-        }
+        
         $websiteId = $this->helper->getWebsiteId();
         $storeId = $this->helper->getStoreId();
         $storeCode = $this->helper->getStoreCode();
@@ -119,7 +117,9 @@ class AbandonedCart
 
         /** @var Collection $quoteCollection */
         $quoteCollection = $this->quoteFactory->create()->getCollection()
-            ->addFieldToFilter('is_active', 1);
+            ->addFieldToFilter('is_active', 1)
+            ->addFieldToFilter('updated_at', ['from' => $updateFrom])
+            ->addFieldToFilter('updated_at', ['to' => $updateTo]);
 
         /** @var Collection $noneUpdateQuoteCollection */
         $noneUpdateQuoteCollection = $this->quoteFactory->create()->getCollection()
@@ -174,29 +174,31 @@ class AbandonedCart
                 $headersConfig = [];
                 $headersConfig[] = 'X-APP-KEY: ' . $this->helper->getConfigGeneral('blueoshan/connection/apptoken');
                 $headersConfig[] = 'Content-Type: application/json';
-                $curl = $this->curlFactory->create();
-                
-                $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
+                if ($this->helper->isConnectorEnabled($quote->getStoreId())) {
+                    $curl = $this->curlFactory->create();
+                    
+                    $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
 
-                $result = ['success' => false];
+                    $result = ['success' => false];
 
-                try {
-                    $resultCurl         = $curl->read();
-                    $result['response'] = $resultCurl;
-                    if (!empty($resultCurl)) {
-                        $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-                        if (isset($result['status']) && $this->isSuccess($result['status'])) {
-                            $result['success'] = true;
+                    try {
+                        $resultCurl         = $curl->read();
+                        $result['response'] = $resultCurl;
+                        if (!empty($resultCurl)) {
+                            $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                            if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                                $result['success'] = true;
+                            } else {
+                                $result['message'] = __('Cannot connect to server. Please try again later.');
+                            }
                         } else {
                             $result['message'] = __('Cannot connect to server. Please try again later.');
                         }
-                    } else {
-                        $result['message'] = __('Cannot connect to server. Please try again later.');
+                    } catch (Exception $e) {
+                        $result['message'] = $e->getMessage();
                     }
-                } catch (Exception $e) {
-                    $result['message'] = $e->getMessage();
+                    $curl->close();
                 }
-                $curl->close();
             }
             foreach ($noneUpdateQuoteCollection as $quote) {
                 $output = $this->helper->objToArray($quote);
@@ -243,29 +245,31 @@ class AbandonedCart
                 $headersConfig = [];
                 $headersConfig[] = 'X-APP-KEY: ' . $this->helper->getConfigGeneral('blueoshan/connection/apptoken');
                 $headersConfig[] = 'Content-Type: application/json';
-                $curl = $this->curlFactory->create();
-                
-                $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
+                if ($this->helper->isConnectorEnabled($quote->getStoreId())) {
+                    $curl = $this->curlFactory->create();
+                    
+                    $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
 
-                $result = ['success' => false];
+                    $result = ['success' => false];
 
-                try {
-                    $resultCurl         = $curl->read();
-                    $result['response'] = $resultCurl;
-                    if (!empty($resultCurl)) {
-                        $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-                        if (isset($result['status']) && $this->isSuccess($result['status'])) {
-                            $result['success'] = true;
+                    try {
+                        $resultCurl         = $curl->read();
+                        $result['response'] = $resultCurl;
+                        if (!empty($resultCurl)) {
+                            $result['status'] = Zend_Http_Response::extractCode($resultCurl);
+                            if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                                $result['success'] = true;
+                            } else {
+                                $result['message'] = __('Cannot connect to server. Please try again later.');
+                            }
                         } else {
                             $result['message'] = __('Cannot connect to server. Please try again later.');
                         }
-                    } else {
-                        $result['message'] = __('Cannot connect to server. Please try again later.');
+                    } catch (Exception $e) {
+                        $result['message'] = $e->getMessage();
                     }
-                } catch (Exception $e) {
-                    $result['message'] = $e->getMessage();
+                    $curl->close();
                 }
-                $curl->close();
             }
         } catch (Exception $e) {
             $this->logger->debug('Abandoned cart webhook error ' . $e->getMessage());

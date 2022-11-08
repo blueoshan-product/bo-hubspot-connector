@@ -67,7 +67,9 @@ class SaveAddressPlugin
             "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->helper->getMediaUrl()
         ];
         $this->loggerInterface->debug(json_encode($eventName).' is '.json_encode($body));
-        $this->helper->sendDataToHook($body);
+        if ($this->helper->isConnectorEnabled($quote->getStoreId())) {
+            $this->helper->sendDataToHook($body);
+        }
 
         return $result;
     }

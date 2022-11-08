@@ -225,11 +225,14 @@ class Data extends AbstractHelper
      */
     public function sendHttpRequest($item)
     {
-        if (!$this->isConnectorEnabled($this->getStoreId())) {
-            return;
-        }
-
         $eventName = $item->getEvent()->getName();
+
+        if($eventName != "catalog_product_save_after" && $eventName != "catalog_product_delete_before"){
+            if (!$this->isConnectorEnabled($item->getDataObject()->getStoreId())) {
+                return;
+            }
+        }
+        
         $endpoint = "";
         if($eventName == "customer_save_after" || $eventName == "customer_address_save_after" || $eventName == "newsletter_subscriber_save_after"){
             $endpoint = "customer_webhook";
@@ -280,11 +283,7 @@ class Data extends AbstractHelper
      * @return array
      */
     public function sendDataToHook($body)
-    {
-        if (!$this->isConnectorEnabled($this->getStoreId())) {
-            return;
-        }
-        
+    {       
 
         $url = $this->getConfigGeneral('blueoshan/webhook/hook_url').'/order_webhook';
         

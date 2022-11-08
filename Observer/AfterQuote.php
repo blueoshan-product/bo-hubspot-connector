@@ -59,6 +59,7 @@ class AfterQuote implements ObserverInterface
         } else {
             $result['customer_group'] = 'Guest';
         }
+        $result['original_active_status'] = $quote->getOrigData('is_active');
         $body["data"] = $result;
         $body["storeData"] = [
             "websiteId" => $websiteId,
@@ -69,6 +70,9 @@ class AfterQuote implements ObserverInterface
             "mediaURL" => (isset($stores[$storeId]['media_url']))?  $stores[$storeId]['media_url']:$this->helper->getMediaUrl()
         ];
         $this->loggerInterface->debug(json_encode($observer->getEvent()->getName()).' is '.json_encode($result));
-        $this->helper->sendDataToHook($body);
+        if ($this->helper->isConnectorEnabled($quote->getStoreId())) {
+            $this->helper->sendDataToHook($body);
+        }
+        
     }
 }
