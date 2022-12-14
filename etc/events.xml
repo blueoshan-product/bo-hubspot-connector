@@ -33,9 +33,9 @@
     <event name="catalog_product_delete_before">
         <observer name="bo_hook_delete_product" instance="Blueoshan\HubspotConnector\Observer\BeforeDeleteProduct"/>
     </event>
-    <event name="customer_login">
+    <!-- <event name="customer_login">
         <observer name="bo_hook_customer_login" instance="Blueoshan\HubspotConnector\Observer\CustomerLogin"/>
-    </event>
+    </event> -->
     <event name="newsletter_subscriber_save_after">
         <observer name="bo_hook_subscriber" instance="Blueoshan\HubspotConnector\Observer\Subscriber"/>
     </event>
