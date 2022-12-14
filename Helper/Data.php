@@ -233,11 +233,9 @@ class Data extends AbstractHelper
             }
         }else{
             if($eventName != "catalog_product_save_after" && $eventName != "catalog_product_delete_before"){
-                if($eventName == "sales_order_save_after"){
                     if (!$this->isConnectorEnabled($item->getOrder()->getStoreId())) {
                         return;
                     }
-                }
             }
         }
         
