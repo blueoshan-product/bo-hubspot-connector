@@ -19,7 +19,7 @@ use Magento\Framework\ObjectManagerInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Framework\App\Helper\AbstractHelper;
 use Psr\Log\LoggerInterface;
-use Zend_Http_Response;
+use Magento\Framework\HTTP\ZendClientFactory;
 
 class Data extends AbstractHelper
 {
@@ -68,6 +68,11 @@ class Data extends AbstractHelper
     protected $quoteIdMaskFactory;
 
     /**
+     * @var ZendClientFactory
+     */
+    private $zendClientFactory;
+
+    /**
      * Data constructor.
      *
      * @param Context $context
@@ -77,6 +82,7 @@ class Data extends AbstractHelper
      * @param CustomerGroupCollection $customerGroup
      * @param TransportBuilder $transportBuilder
      * @param CurlFactory $curlFactory
+     * @param ZendClientFactory $zendClientFactory
      * @param ProductMetadataInterface $metaData
      * @param CartRepositoryInterface $cartRepository
      * @param QuoteIdMaskFactory $quoteIdMaskFactory
@@ -91,6 +97,7 @@ class Data extends AbstractHelper
         TransportBuilder $transportBuilder,
         ProductMetadataInterface $metaData,
         CurlFactory $curlFactory,
+        ZendClientFactory $zendClientFactory,
         CustomerRepositoryInterface $customer,
         CartRepositoryInterface $cartRepository,
         QuoteIdMaskFactory $quoteIdMaskFactory,
@@ -105,6 +112,7 @@ class Data extends AbstractHelper
         $this->quoteIdMaskFactory = $quoteIdMaskFactory;
         $this->metaData = $metaData;
         $this->curlFactory = $curlFactory;
+        $this->zendClientFactory = $zendClientFactory;
         $this->logger = $logger;
         parent::__construct($context);
     }
@@ -268,9 +276,10 @@ class Data extends AbstractHelper
         try {
             $resultCurl         = $curl->read();
             $result['response'] = $resultCurl;
+
+            $httpStatusCode = $curl->getInfo(CURLINFO_HTTP_CODE);
             if (!empty($resultCurl)) {
-                $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-                if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                if ($this->isSuccess($httpStatusCode)) {
                     $result['success'] = true;
                 } else {
                     $result['message'] = __('Cannot connect to server. Please try again later.');
@@ -309,9 +318,10 @@ class Data extends AbstractHelper
         try {
             $resultCurl         = $curl->read();
             $result['response'] = $resultCurl;
+
+            $httpStatusCode = $curl->getInfo(CURLINFO_HTTP_CODE);
             if (!empty($resultCurl)) {
-                $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-                if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                if ($this->isSuccess($httpStatusCode)) {
                     $result['success'] = true;
                 } else {
                     $result['message'] = __('Cannot connect to server. Please try again later.');

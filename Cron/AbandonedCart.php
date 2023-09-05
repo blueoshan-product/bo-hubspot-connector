@@ -255,9 +255,10 @@ class AbandonedCart
                     try {
                         $resultCurl         = $curl->read();
                         $result['response'] = $resultCurl;
+            
+                        $httpStatusCode = $curl->getInfo(CURLINFO_HTTP_CODE);
                         if (!empty($resultCurl)) {
-                            $result['status'] = Zend_Http_Response::extractCode($resultCurl);
-                            if (isset($result['status']) && $this->isSuccess($result['status'])) {
+                            if ($this->isSuccess($httpStatusCode)) {
                                 $result['success'] = true;
                             } else {
                                 $result['message'] = __('Cannot connect to server. Please try again later.');
