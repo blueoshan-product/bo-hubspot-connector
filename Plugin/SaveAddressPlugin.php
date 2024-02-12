@@ -22,13 +22,13 @@ class SaveAddressPlugin
     /**
      * @param ShippingInformationManagementInterface $subject
      * @param PaymentDetailsInterface $result
-     * @param int $cartId
+     * @param mixed $cartId
      * @return PaymentDetailsInterface
      */
     public function afterSaveAddressInformation(
         ShippingInformationManagementInterface $subject,
         PaymentDetailsInterface $result,
-        int $cartId
+        mixed $cartId
     ) {
         $websiteId = $this->helper->getWebsiteId();
         $storeId = $this->helper->getStoreId();

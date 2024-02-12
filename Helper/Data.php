@@ -220,11 +220,21 @@ class Data extends AbstractHelper
      */
     public function getQuote($cartId)
     {
-        $quoteIdMask = $this->quoteIdMaskFactory->create()->load($cartId, 'masked_id');
-        $cartId = $quoteIdMask->getQuoteId() ?: $cartId;
-
-        return $this->cartRepository->get($cartId);
+        if (is_numeric($cartId)) {
+            // If $cartId is numeric, it's assumed to be the quote ID directly
+            return $this->cartRepository->get($cartId);
+        } else {
+            // If $cartId is not numeric, assume it's a masked ID
+            $quoteIdMask = $this->quoteIdMaskFactory->create()->load($cartId, 'masked_id');
+            $quoteId = $quoteIdMask->getQuoteId();
+            if (!$quoteId) {
+                // Handle the case where the masked ID doesn't correspond to a quote
+                throw new NoSuchEntityException(__('The provided masked ID does not correspond to a quote.'));
+            }
+            return $this->cartRepository->get($quoteId);
+        }
     }
+
 
     /**
      * @param $body
