@@ -6,7 +6,7 @@ use Magento\Framework\Event\Observer;
 use Magento\Framework\Event\ObserverInterface;
 use Psr\Log\LoggerInterface;
 use Blueoshan\HubspotConnector\Helper\Data;
-
+       
 /**
  * Class AfterQuote
  * @package Blueoshan\HubspotConnector\Observer
