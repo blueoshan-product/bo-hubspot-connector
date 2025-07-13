@@ -15,6 +15,7 @@ use Magento\Quote\Model\QuoteIdMaskFactory;
 use Blueoshan\HubspotConnector\Helper\Data;
 use Psr\Log\LoggerInterface;
 use Zend_Http_Response;
+use Blueoshan\HubspotConnector\Logger\Logger as CustomLogger;
 
 /**
  * Class AbandonedCart
@@ -61,6 +62,8 @@ class AbandonedCart
 
     private $quoteIdMaskFactory;
 
+    protected $customLogger;
+
     /**
      * AbandonedCart constructor.
      * @param LoggerInterface $logger
@@ -80,6 +83,7 @@ class AbandonedCart
         CurlFactory $curlFactory,
         QuoteIdMaskFactory $quoteIdMaskFactory,
         QuoteCollection $quoteCollection,
+        CustomLogger $customLogger,
         QuoteItemCollection $quoteItemCollection
     ) {
         $this->logger = $logger;
@@ -90,6 +94,7 @@ class AbandonedCart
         $this->curlFactory = $curlFactory;
         $this->quoteCollection = $quoteCollection;
         $this->quoteItemCollection = $quoteItemCollection;
+        $this->customLogger = $customLogger;
     }
 
     /**
@@ -106,14 +111,14 @@ class AbandonedCart
         $body = array();
         $body["eventName"] = "abandoned_cart";
         $customerGroups = $this->helper->getCustomerGroups();
-        $this->logger->debug('Customer Group is '. json_encode($customerGroups));
+        $this->customLogger->debug('Customer Group is '. json_encode($customerGroups));
         $abandonedTime = (int)$this->helper->getConfigGeneral('blueoshan/webhook/abandoned_time');
-        $this->logger->debug('Abandoned Time is '.$abandonedTime);
+        $this->customLogger->debug('Abandoned Time is '.$abandonedTime);
         $update = (new DateTime())->sub(new DateInterval("PT{$abandonedTime}H"));
         $updateTo = clone $update;
         $updateFrom = $update->sub(new DateInterval("PT1H"));
-        $this->logger->debug('Updated From is '.$updateFrom->format('Y-m-d H:i:s'));
-        $this->logger->debug('Updated To is '.$updateTo->format('Y-m-d H:i:s'));
+        $this->customLogger->debug('Updated From is '.$updateFrom->format('Y-m-d H:i:s'));
+        $this->customLogger->debug('Updated To is '.$updateTo->format('Y-m-d H:i:s'));
 
         /** @var Collection $quoteCollection */
         $quoteCollection = $this->quoteFactory->create()->getCollection()
@@ -158,7 +163,7 @@ class AbandonedCart
                     $output['customer_group'] = 'Guest';
                 }
                 $body["data"] = $output;
-                $this->logger->debug('Abandoned cart is' . json_encode($output));
+                $this->customLogger->debug('Abandoned cart is' . json_encode($output));
                 $body["storeData"] = [
                     "websiteId" => $websiteId,
                     "storeId" => $storeId,
@@ -229,7 +234,7 @@ class AbandonedCart
                     $output['customer_group'] = 'Guest';
                 }
                 $body["data"] = $output;
-                $this->logger->debug('Abandoned cart is' . json_encode($output));
+                $this->customLogger->debug('Abandoned cart is' . json_encode($output));
                 $body["storeData"] = [
                     "websiteId" => $websiteId,
                     "storeId" => $storeId,
@@ -273,8 +278,8 @@ class AbandonedCart
                 }
             }
         } catch (Exception $e) {
-            $this->logger->debug('Abandoned cart webhook error ' . $e->getMessage());
-            $this->logger->critical($e->getMessage());
+            $this->customLogger->debug('Abandoned cart webhook error ' . $e->getMessage());
+            $this->customLogger->critical($e->getMessage());
         }
     }
 }

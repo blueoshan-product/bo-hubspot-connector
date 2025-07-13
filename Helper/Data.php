@@ -20,6 +20,7 @@ use Magento\Store\Model\StoreManagerInterface;
 use Magento\Framework\App\Helper\AbstractHelper;
 use Psr\Log\LoggerInterface;
 use Magento\Framework\HTTP\ZendClientFactory;
+use Blueoshan\HubspotConnector\Logger\Logger as CustomLogger;
 
 class Data extends AbstractHelper
 {
@@ -72,6 +73,9 @@ class Data extends AbstractHelper
      */
     private $zendClientFactory;
 
+    protected $customLogger;
+
+
     /**
      * Data constructor.
      *
@@ -101,6 +105,7 @@ class Data extends AbstractHelper
         CustomerRepositoryInterface $customer,
         CartRepositoryInterface $cartRepository,
         QuoteIdMaskFactory $quoteIdMaskFactory,
+        CustomLogger $customLogger,
         LoggerInterface $logger
     ) {
         $this->transportBuilder = $transportBuilder;
@@ -110,6 +115,7 @@ class Data extends AbstractHelper
         $this->storeManager     = $storeManager;
         $this->cartRepository = $cartRepository;
         $this->quoteIdMaskFactory = $quoteIdMaskFactory;
+        $this->customLogger = $customLogger;
         $this->metaData = $metaData;
         $this->curlFactory = $curlFactory;
         $this->zendClientFactory = $zendClientFactory;
@@ -118,7 +124,7 @@ class Data extends AbstractHelper
     }
     public function logData($logName,$item)
     {
-        $this->logger->debug($logName . ' is ' . \Magento\Framework\Serialize\JsonConverter::convert($this->objToArray($item)));
+        $this->customLogger->debug($logName . ' is ' . \Magento\Framework\Serialize\JsonConverter::convert($this->objToArray($item)));
     }
     /**
      * @param $item
@@ -273,11 +279,13 @@ class Data extends AbstractHelper
         $method = 'POST';
         
         $body = $this->generateBody($item);
-        $this->logger->debug('Final Data is ' . $body);
+        $this->customLogger->debug('Final Data is ' . $body);
         $headersConfig = [];
         $headersConfig[] = 'X-APP-KEY: ' . $this->getConfigGeneral('blueoshan/connection/apptoken');
         $headersConfig[] = 'Content-Type: application/json';
         $curl = $this->curlFactory->create();
+        $curl->setTimeout(10);           // Timeout in seconds
+        $curl->setConnectTimeout(5);     // Connection timeout
         
         $curl->write($method, $url, '1.1', $headersConfig, $body);
 

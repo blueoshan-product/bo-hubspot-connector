@@ -14,6 +14,15 @@
     <type name="Magento\Checkout\Model\ShippingInformationManagement">
         <plugin name="bo_get_address" type="Blueoshan\HubspotConnector\Plugin\SaveAddressPlugin" sortOrder="1"/>
     </type>
+
+    <type name="Blueoshan\HubspotConnector\Logger\Logger">
+        <arguments>
+            <argument name="name" xsi:type="string">bohubspot</argument>
+            <argument name="handlers" xsi:type="array">
+                <item name="system" xsi:type="object">Blueoshan\HubspotConnector\Logger\Handler</item>
+            </argument>
+        </arguments>
+    </type>
     <!-- <type name="Magento\Checkout\Model\Cart">
         <plugin name="blueoshan_quote_hook" type="Blueoshan\HubspotConnector\Plugin\SaveCartPlugin" sortOrder="99"/>
     </type> -->
