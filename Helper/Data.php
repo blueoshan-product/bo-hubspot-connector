@@ -13,7 +13,7 @@ use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Model\ResourceModel\Group\Collection as CustomerGroupCollection;
 use Magento\Framework\App\Helper\Context;
 use Magento\Framework\Exception\NoSuchEntityException;
-use Magento\Framework\HTTP\Adapter\CurlFactory;
+use Magento\Framework\HTTP\Client\Curl;
 use Magento\Framework\Mail\Template\TransportBuilder;
 use Magento\Framework\ObjectManagerInterface;
 use Magento\Store\Model\StoreManagerInterface;
@@ -26,9 +26,9 @@ class Data extends AbstractHelper
 {
 
     /**
-     * @var CurlFactory
+     * @var Curl
      */
-    protected $curlFactory;
+    protected $curlClient;
 
     /**
      * @var LoggerInterface
@@ -73,6 +73,16 @@ class Data extends AbstractHelper
      */
     private $zendClientFactory;
 
+    /**
+     * @var StoreManagerInterface
+     */
+    protected $storeManager;
+
+    /**
+     * @var ObjectManagerInterface
+     */
+    protected $objectManager;
+
     protected $customLogger;
 
 
@@ -85,7 +95,7 @@ class Data extends AbstractHelper
      * @param UrlInterface $backendUrl
      * @param CustomerGroupCollection $customerGroup
      * @param TransportBuilder $transportBuilder
-     * @param CurlFactory $curlFactory
+     * @param Curl $curlClient
      * @param ZendClientFactory $zendClientFactory
      * @param ProductMetadataInterface $metaData
      * @param CartRepositoryInterface $cartRepository
@@ -100,7 +110,7 @@ class Data extends AbstractHelper
         UrlInterface $backendUrl,
         TransportBuilder $transportBuilder,
         ProductMetadataInterface $metaData,
-        CurlFactory $curlFactory,
+        Curl $curlClient,
         ZendClientFactory $zendClientFactory,
         CustomerRepositoryInterface $customer,
         CartRepositoryInterface $cartRepository,
@@ -117,7 +127,7 @@ class Data extends AbstractHelper
         $this->quoteIdMaskFactory = $quoteIdMaskFactory;
         $this->customLogger = $customLogger;
         $this->metaData = $metaData;
-        $this->curlFactory = $curlFactory;
+        $this->curlClient = $curlClient;
         $this->zendClientFactory = $zendClientFactory;
         $this->logger = $logger;
         parent::__construct($context);
@@ -295,64 +305,58 @@ class Data extends AbstractHelper
     {
         $eventName = $item->getEvent()->getName();
 
-        if($eventName == "customer_login" || $eventName == "customer_save_after"){
+        if ($eventName === "customer_login" || $eventName === "customer_save_after") {
             if (!$this->isConnectorEnabled($item->getCustomer()->getStoreId())) {
                 return;
             }
-        }else{
-            if($eventName != "catalog_product_save_after" && $eventName != "catalog_product_delete_before"){
-                    if($eventName == "sales_order_save_after"){
-			    if (!$this->isConnectorEnabled($item->getOrder()->getStoreId())) {
-				return;
-			    }
-			}
+        } else {
+            if (!in_array($eventName, ["catalog_product_save_after", "catalog_product_delete_before"])) {
+                if ($eventName === "sales_order_save_after") {
+                    if (!$this->isConnectorEnabled($item->getOrder()->getStoreId())) {
+                        return;
+                    }
+                }
             }
         }
-        
-        $endpoint = "";
-        if($eventName == "customer_save_after" || $eventName == "customer_address_save_after" || $eventName == "newsletter_subscriber_save_after"){
-            $endpoint = "customer_webhook";
-        }else if($eventName == "sales_order_save_after" || $eventName == "sales_order_status_history_save_after" || $eventName == "sales_order_shipment_save_after" || $eventName == "sales_order_invoice_save_after" || $eventName == "sales_quote_save_after" || $eventName == "quote_address_save_after"){
-            $endpoint = "order_webhook";
-        }else if($eventName == "catalog_product_save_after" || $eventName == "catalog_product_delete_before"){
-            $endpoint = "product_webhook";
+
+        $endpoint = match ($eventName) {
+            "customer_save_after", "customer_address_save_after", "newsletter_subscriber_save_after" => "customer_webhook",
+            "sales_order_save_after", "sales_order_status_history_save_after", "sales_order_shipment_save_after", "sales_order_invoice_save_after", "sales_quote_save_after", "quote_address_save_after" => "order_webhook",
+            "catalog_product_save_after", "catalog_product_delete_before" => "product_webhook",
+            default => null,
+        };
+
+        if (!$endpoint) {
+            return;
         }
 
-        $url = $this->getConfigGeneral('blueoshan/webhook/hook_url').'/'.$endpoint;
-        
-        $method = 'POST';
-        
+        $url = $this->getConfigGeneral('blueoshan/webhook/hook_url') . '/' . $endpoint;
         $body = $this->generateBody($item);
-        $this->customLogger->debug('Final Data is ' . $body);
-        $headersConfig = [];
-        $headersConfig[] = 'X-APP-KEY: ' . $this->getConfigGeneral('blueoshan/connection/apptoken');
-        $headersConfig[] = 'Content-Type: application/json';
-        $curl = $this->curlFactory->create();
-        $curl->setTimeout(10);           // Timeout in seconds
-        $curl->setConnectTimeout(5);     // Connection timeout
-        
-        $curl->write($method, $url, '1.1', $headersConfig, $body);
+
+        $headers = [
+            'X-APP-KEY' => $this->getConfigGeneral('blueoshan/connection/apptoken'),
+            'Content-Type' => 'application/json'
+        ];
 
         $result = ['success' => false];
 
         try {
-            $resultCurl         = $curl->read();
-            $result['response'] = $resultCurl;
+            $this->curlClient->setTimeout(10);
+            $this->curlClient->setHeaders($headers);
+            $this->curlClient->post($url, $body);
 
-            $httpStatusCode = $curl->getInfo(CURLINFO_HTTP_CODE);
-            if (!empty($resultCurl)) {
-                if ($this->isSuccess($httpStatusCode)) {
-                    $result['success'] = true;
-                } else {
-                    $result['message'] = __('Cannot connect to server. Please try again later.');
-                }
-            } else {
-                $result['message'] = __('Cannot connect to server. Please try again later.');
+            $status = $this->curlClient->getStatus();
+            $response = $this->curlClient->getBody();
+
+            $result['response'] = $response;
+            $result['success'] = $this->isSuccess($status);
+
+            if (!$result['success']) {
+                $result['message'] = __('Server error. Please try again later.');
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $result['message'] = $e->getMessage();
         }
-        $curl->close();
 
         return $result;
     }
@@ -362,40 +366,34 @@ class Data extends AbstractHelper
      * @return array
      */
     public function sendDataToHook($body)
-    {       
+    {
+        $url = $this->getConfigGeneral('blueoshan/webhook/hook_url') . '/order_webhook';
 
-        $url = $this->getConfigGeneral('blueoshan/webhook/hook_url').'/order_webhook';
-        
-        $method = 'POST';
-
-        $headersConfig = [];
-        $headersConfig[] = 'X-APP-KEY: ' . $this->getConfigGeneral('blueoshan/connection/apptoken');
-        $headersConfig[] = 'Content-Type: application/json';
-        $curl = $this->curlFactory->create();
-        
-        $curl->write($method, $url, '1.1', $headersConfig, json_encode($body));
+        $headers = [
+            'X-APP-KEY' => $this->getConfigGeneral('blueoshan/connection/apptoken'),
+            'Content-Type' => 'application/json'
+        ];
 
         $result = ['success' => false];
 
         try {
-            $resultCurl         = $curl->read();
-            $result['response'] = $resultCurl;
+            $this->curlClient->setTimeout(10);
+            $this->curlClient->setHeaders($headers);
+            $this->curlClient->post($url, json_encode($body));
 
-            $httpStatusCode = $curl->getInfo(CURLINFO_HTTP_CODE);
-            if (!empty($resultCurl)) {
-                if ($this->isSuccess($httpStatusCode)) {
-                    $result['success'] = true;
-                } else {
-                    $result['message'] = __('Cannot connect to server. Please try again later.');
-                }
-            } else {
-                $result['message'] = __('Cannot connect to server. Please try again later.');
+            $status = $this->curlClient->getStatus();
+            $response = $this->curlClient->getBody();
+
+            $result['response'] = $response;
+            $result['success'] = $this->isSuccess($status);
+
+            if (!$result['success']) {
+                $result['message'] = __('Server error. Please try again later.');
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $result['message'] = $e->getMessage();
         }
-        $curl->close();
-        
+
         return $result;
     }
     public function generateBody($item)

@@ -28,6 +28,11 @@ abstract class AfterSave implements ObserverInterface
     protected $storeManager;
 
     /**
+     * @var ManagerInterface
+     */
+    protected $messageManager;
+
+    /**
      * AfterSave constructor.
      *
      * @param ManagerInterface $messageManager
