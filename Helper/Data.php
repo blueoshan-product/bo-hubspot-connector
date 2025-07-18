@@ -134,50 +134,23 @@ class Data extends AbstractHelper
     }
     public function logData($logName, $item)
     {
-    try {
-        // Convert mixed data (objects, arrays) to a pure array
-        $arrayData = $this->deepConvertToArray($item);
+        try {
+            $data = is_object($item) && method_exists($item, 'getData')
+                ? $item->getData()
+                : (is_array($item) ? $item : ['value' => $item]);
 
-        // Recursively ensure all strings are valid UTF-8
-        array_walk_recursive($arrayData, function (&$value) {
-            if (is_string($value)) {
-                // Strip invalid UTF-8 characters
-                $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
-            }
-        });
+            array_walk_recursive($data, function (&$value) {
+                if (is_string($value)) {
+                    $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+                }
+            });
 
-        // Convert to JSON using Magento's safe converter
-        $json = \Magento\Framework\Serialize\JsonConverter::convert($arrayData);
+            $json = \Magento\Framework\Serialize\JsonConverter::convert($data);
 
-        // Log the cleaned JSON
-        $this->customLogger->debug($logName . ' is ' . $json);
-    } catch (\Exception $e) {
-        $this->customLogger->debug($logName . ' Logging failed: ' . $e->getMessage());
-    }
-    }
-
-    private function deepConvertToArray($data)
-    {
-    if (is_array($data)) {
-        $result = [];
-        foreach ($data as $key => $value) {
-            $result[$key] = $this->deepConvertToArray($value);
+            $this->customLogger->debug($logName . ' is ' . $json);
+        } catch (\Exception $e) {
+            $this->customLogger->debug($logName . ' Logging failed: ' . $e->getMessage());
         }
-        return $result;
-    }
-
-    if (is_object($data)) {
-        if ($data instanceof \JsonSerializable) {
-            return $this->deepConvertToArray($data->jsonSerialize());
-        }
-        if (method_exists($data, 'toArray')) {
-            return $this->deepConvertToArray($data->toArray());
-        }
-        return $this->deepConvertToArray(get_object_vars($data));
-    }
-
-    // Fallback: return value directly (for scalar, null, etc.)
-    return $data;
     }
 
     /**
