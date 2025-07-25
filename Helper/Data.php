@@ -305,7 +305,6 @@ class Data extends AbstractHelper
 
         $url = $this->getConfigGeneral('blueoshan/webhook/hook_url') . '/' . $endpoint;
         $body = $this->generateBody($item);
-
         $headers = [
             'X-APP-KEY' => $this->getConfigGeneral('blueoshan/connection/apptoken'),
             'Content-Type' => 'application/json'
@@ -314,6 +313,10 @@ class Data extends AbstractHelper
         $result = ['success' => false];
 
         try {
+            $this->customLogger->debug("[Webhook Request] URL: $url");
+            $this->customLogger->debug("[Webhook Request] Headers: " . json_encode($headers));
+            $this->customLogger->debug("[Webhook Request] Body: $body");
+
             $this->curlClient->setTimeout(10);
             $this->curlClient->setHeaders($headers);
             $this->curlClient->post($url, $body);
@@ -324,15 +327,20 @@ class Data extends AbstractHelper
             $result['response'] = $response;
             $result['success'] = $this->isSuccess($status);
 
+            $this->customLogger->debug("[Webhook Response] Status: $status");
+            $this->customLogger->debug("[Webhook Response] Body: $response");
+
             if (!$result['success']) {
                 $result['message'] = __('Server error. Please try again later.');
             }
         } catch (\Exception $e) {
+            $this->customLogger->debug("[Webhook Error] Exception: " . $e->getMessage());
             $result['message'] = $e->getMessage();
         }
 
         return $result;
     }
+
     /**
      * @param array $body
      * 
@@ -347,15 +355,23 @@ class Data extends AbstractHelper
             'Content-Type' => 'application/json'
         ];
 
+        $jsonBody = json_encode($body);
         $result = ['success' => false];
 
         try {
+            $this->customLogger->debug("[Hook Request] URL: $url");
+            $this->customLogger->debug("[Hook Request] Headers: " . json_encode($headers));
+            $this->customLogger->debug("[Hook Request] Body: $jsonBody");
+
             $this->curlClient->setTimeout(10);
             $this->curlClient->setHeaders($headers);
-            $this->curlClient->post($url, json_encode($body));
+            $this->curlClient->post($url, $jsonBody);
 
             $status = $this->curlClient->getStatus();
             $response = $this->curlClient->getBody();
+
+            $this->customLogger->debug("[Hook Response] Status: $status");
+            $this->customLogger->debug("[Hook Response] Body: $response");
 
             $result['response'] = $response;
             $result['success'] = $this->isSuccess($status);
@@ -364,11 +380,13 @@ class Data extends AbstractHelper
                 $result['message'] = __('Server error. Please try again later.');
             }
         } catch (\Exception $e) {
+            $this->customLogger->debug("[Hook Error] Exception: " . $e->getMessage());
             $result['message'] = $e->getMessage();
         }
 
         return $result;
     }
+
     public function generateBody($item)
     {
         $websiteId = $this->getWebsiteId();
